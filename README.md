@@ -168,7 +168,7 @@ web-mutu/
 1. **Clone repo**
    ```bash
    git clone https://github.com/dextryayers/rujukan-jatim.git
-   cd web-mutu
+   cd rujukan-mutu
    ```
 2. **Salin berkas environment**
    ```bash
@@ -335,3 +335,4 @@ Proyek adalah aset internal Dinas Kesehatan Jawa Timur. Penggunaan eksternal mem
 ---
 
 > Dokumentasi diperbarui terakhir pada **Desember 2025**. Mohon perbarui README setiap kali ada perubahan signifikan pada infrastruktur, dependensi, atau alur kerja.
+
