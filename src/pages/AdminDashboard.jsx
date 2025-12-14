@@ -961,7 +961,7 @@ function RekapitulasiPanel({ onExport, rekapAkreditasi, rekapIndikator, section,
         <div>
           <p className="text-xs uppercase tracking-[0.28em] text-primary-600/80 dark:text-primary-300/70">Rekapitulasi</p>
           <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Spreadsheet Otomatis Multi-Sheet</h3>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 max-w-2xl">Pilih sheet di bawah untuk melihat tabel akreditasi atau indikator dalam format lembar kerja. Semua formula siap diekspor ke CSV.</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 max-w-2xl">Pilih sheet di bawah untuk menampilkan data bergaya Excel lengkap dengan kolom huruf dan nomor baris. Rekomendasi rumus kami letakkan di bagian bawah agar tampilan tabel tetap bersih.</p>
         </div>
         <div className="flex flex-col items-start gap-2 md:items-end">
           <button
@@ -1017,95 +1017,152 @@ function RekapitulasiPanel({ onExport, rekapAkreditasi, rekapIndikator, section,
       </div>
 
       {section === 'akreditasi' ? (
-        <RekapAkreditasiSheet rows={rekapAkreditasi.rows} bestDisplay={rekapAkreditasi.bestDisplay} gapDisplay={rekapAkreditasi.gapDisplay} />
+        <RekapAkreditasiSheet
+          rows={rekapAkreditasi.rows}
+          bestDisplay={rekapAkreditasi.bestDisplay}
+          gapDisplay={rekapAkreditasi.gapDisplay}
+        />
       ) : (
-        <RekapIndikatorSheet rows={rekapIndikator.rows} achieved={rekapIndikator.achieved} total={rekapIndikator.total} progressDisplay={rekapIndikator.progressDisplay} coverageDisplay={rekapIndikator.coverageDisplay} />
+        <RekapIndikatorSheet
+          rows={rekapIndikator.rows}
+          achieved={rekapIndikator.achieved}
+          total={rekapIndikator.total}
+          progressDisplay={rekapIndikator.progressDisplay}
+          coverageDisplay={rekapIndikator.coverageDisplay}
+        />
       )}
     </div>
   )
 }
 
 function RekapAkreditasiSheet({ rows, bestDisplay, gapDisplay }) {
+  const columns = [
+    { key: 'label', label: 'Keterangan' },
+    { key: 'valueDisplay', label: 'Nilai (%)', cellClass: 'text-right font-semibold text-primary-700 dark:text-primary-200' },
+    { key: 'note', label: 'Catatan' },
+  ]
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="rounded-2xl border border-primary-200/70 bg-gradient-to-br from-primary-100/80 via-white to-primary-200/70 p-5 shadow-sm dark:border-primary-500/40 dark:from-primary-900/40 dark:via-slate-900/60 dark:to-primary-900/20">
         <h4 className="text-lg font-semibold text-primary-900 dark:text-primary-50">Sheet "Akreditasi.xlsx"</h4>
-        <p className="mt-1 text-sm text-primary-700/80 dark:text-primary-200/80">Menyorot perhitungan Paripurna, Utama, Madya beserta rata-rata dan gap menuju target 100%.</p>
+        <p className="mt-1 text-sm text-primary-700/80 dark:text-primary-200/80">Data diringkas seperti lembar kerja — tinggal salin ke Excel untuk pengolahan lanjutan.</p>
       </div>
-      <div className="overflow-x-auto rounded-3xl border border-slate-200/80 bg-white/95 shadow-xl shadow-slate-200/40 dark:border-slate-700/60 dark:bg-slate-900/80">
-        <table className="min-w-full table-fixed border-collapse text-[13px]">
-          <thead className="bg-gradient-to-r from-primary-700 to-primary-500 text-white uppercase tracking-[0.18em]">
-            <tr>
-              <th className="border border-white/30 px-4 py-3 text-left">No.</th>
-              <th className="border border-white/30 px-4 py-3 text-left">Keterangan</th>
-              <th className="border border-white/30 px-4 py-3 text-left">Formula Excel</th>
-              <th className="border border-white/30 px-4 py-3 text-left">Nilai (%)</th>
-              <th className="border border-white/30 px-4 py-3 text-left">Catatan</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white text-slate-700 dark:bg-slate-900 dark:text-slate-100">
-            {rows.map((row, idx) => (
-              <tr
-                key={row.key}
-                className={`border-b border-slate-200/70 dark:border-slate-800/60 ${idx % 2 === 0 ? 'bg-primary-50/40 dark:bg-slate-900/60' : ''}`}
-              >
-                <td className="border border-slate-200/60 px-4 py-3 text-slate-500 dark:border-slate-800/60 dark:text-slate-400">{idx + 1}</td>
-                <td className="border border-slate-200/60 px-4 py-3 font-semibold text-slate-700 dark:border-slate-800/60 dark:text-slate-100">{row.label}</td>
-                <td className="border border-slate-200/60 px-4 py-3 font-mono text-[12px] text-primary-700 dark:border-slate-800/60 dark:text-primary-200">{row.formula}</td>
-                <td className="border border-slate-200/60 px-4 py-3 font-semibold text-primary-700 dark:border-slate-800/60 dark:text-primary-200">{row.valueDisplay}</td>
-                <td className="border border-slate-200/60 px-4 py-3 text-slate-500 dark:border-slate-800/60 dark:text-slate-400">{row.note}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+
+      <SpreadsheetTable columns={columns} rows={rows} accent="primary" />
+
       <div className="flex flex-wrap gap-3 text-[11px]">
         <span className="inline-flex items-center gap-2 rounded-full bg-primary-600/10 px-3 py-1 font-semibold text-primary-700 dark:bg-primary-500/20 dark:text-primary-100">Gap ke target 100%: {gapDisplay}</span>
         <span className="inline-flex items-center gap-2 rounded-full bg-emerald-600/10 px-3 py-1 font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100">Level tertinggi: {bestDisplay}</span>
       </div>
+
+      <FormulaList rows={rows} accent="primary" />
     </div>
   )
 }
 
 function RekapIndikatorSheet({ rows, achieved, total, progressDisplay, coverageDisplay }) {
+  const columns = [
+    { key: 'label', label: 'Keterangan' },
+    { key: 'valueDisplay', label: 'Nilai', cellClass: 'text-right font-semibold text-primary-700 dark:text-primary-200' },
+    { key: 'note', label: 'Catatan' },
+  ]
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-slate-50/90 via-white to-slate-100/70 p-5 shadow-sm dark:border-slate-700/60 dark:from-slate-900/70 dark:via-slate-900/60 dark:to-slate-900/40">
         <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Sheet "Indikator.xlsx"</h4>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Memuat formula COUNTIF, AVERAGE, dan persentase kelengkapan data seperti pada contoh lembar kerja.</p>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Disajikan seperti tabel Excel agar mudah dibaca ulang atau diekspor ke format spreadsheet.</p>
       </div>
-      <div className="overflow-x-auto rounded-3xl border border-slate-200/80 bg-white/95 shadow-xl shadow-slate-200/40 dark:border-slate-700/60 dark:bg-slate-900/80">
-        <table className="min-w-full table-fixed border-collapse text-[13px]">
-          <thead className="bg-slate-900 text-white uppercase tracking-[0.18em]">
-            <tr>
-              <th className="border border-white/20 px-4 py-3 text-left">No.</th>
-              <th className="border border-white/20 px-4 py-3 text-left">Keterangan</th>
-              <th className="border border-white/20 px-4 py-3 text-left">Rumus Excel</th>
-              <th className="border border-white/20 px-4 py-3 text-left">Nilai</th>
-              <th className="border border-white/20 px-4 py-3 text-left">Catatan</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white text-slate-700 dark:bg-slate-900 dark:text-slate-100">
-            {rows.map((row, idx) => (
-              <tr
-                key={row.key}
-                className={`border-b border-slate-200/70 dark:border-slate-800/60 ${idx % 2 === 0 ? 'bg-slate-100/60 dark:bg-slate-900/60' : ''}`}
-              >
-                <td className="border border-slate-200/60 px-4 py-3 text-slate-500 dark:border-slate-800/60 dark:text-slate-400">{idx + 1}</td>
-                <td className="border border-slate-200/60 px-4 py-3 font-semibold text-slate-700 dark:border-slate-800/60 dark:text-slate-100">{row.label}</td>
-                <td className="border border-slate-200/60 px-4 py-3 font-mono text-[12px] text-primary-700 dark:border-slate-800/60 dark:text-primary-200">{row.formula}</td>
-                <td className="border border-slate-200/60 px-4 py-3 font-semibold text-primary-700 dark:border-slate-800/60 dark:text-primary-200">{row.valueDisplay}</td>
-                <td className="border border-slate-200/60 px-4 py-3 text-slate-500 dark:border-slate-800/60 dark:text-slate-400">{row.note}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+
+      <SpreadsheetTable columns={columns} rows={rows} accent="slate" />
+
       <div className="flex flex-wrap gap-3 text-[11px]">
         <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100">Mencapai Target: {achieved}/{total}</span>
         <span className="inline-flex items-center gap-2 rounded-full bg-primary-500/10 px-3 py-1 font-semibold text-primary-700 dark:bg-primary-500/20 dark:text-primary-100">Progress Gabungan: {progressDisplay}</span>
         <span className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 px-3 py-1 font-semibold text-amber-700 dark:bg-amber-500/20 dark:text-amber-100">Data Terisi: {coverageDisplay}</span>
       </div>
+
+      <FormulaList rows={rows} accent="slate" />
+    </div>
+  )
+}
+
+function SpreadsheetTable({ columns, rows, accent = 'slate' }) {
+  const letterFor = index => String.fromCharCode(65 + index)
+  const accentHeader =
+    accent === 'primary'
+      ? 'bg-gradient-to-r from-primary-700 to-primary-500 text-white'
+      : 'bg-slate-900 text-white'
+
+  return (
+    <div className="overflow-x-auto rounded-3xl border border-slate-200/80 bg-white/95 shadow-xl shadow-slate-200/40 dark:border-slate-700/60 dark:bg-slate-900/80">
+      <table className="min-w-full border-separate text-[13px]" style={{ borderSpacing: 0 }}>
+        <thead>
+          <tr>
+            <th className="border border-slate-200/70 bg-slate-100 px-3 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-400 dark:border-slate-700/60 dark:bg-slate-900/70 dark:text-slate-500">#</th>
+            {columns.map((col, idx) => (
+              <th
+                key={`letter-${col.key}`}
+                className="border border-slate-200/70 bg-slate-100 px-3 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 text-center dark:border-slate-700/60 dark:bg-slate-900/70 dark:text-slate-400"
+              >
+                {letterFor(idx)}
+              </th>
+            ))}
+          </tr>
+          <tr className={`${accentHeader} uppercase tracking-[0.18em]`}>
+            <th className="border border-white/20 px-3 py-2 text-left text-xs font-semibold opacity-80">Baris</th>
+            {columns.map(col => (
+              <th key={`column-${col.key}`} className="border border-white/20 px-3 py-2 text-left text-xs font-semibold">
+                {col.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, idx) => (
+            <tr
+              key={row.key}
+              className={idx % 2 === 0 ? 'bg-white dark:bg-slate-900/70' : 'bg-slate-50/60 dark:bg-slate-900/50'}
+            >
+              <th className="border border-slate-200/60 px-3 py-2 text-center text-xs font-semibold text-slate-500 dark:border-slate-800/60 dark:text-slate-500">
+                {idx + 1}
+              </th>
+              {columns.map(col => (
+                <td
+                  key={`${row.key}-${col.key}`}
+                  className={`border border-slate-200/60 px-3 py-2 text-sm text-slate-700 dark:border-slate-800/60 dark:text-slate-200 ${col.cellClass || ''}`}
+                >
+                  {row[col.key] ?? '—'}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function FormulaList({ rows, accent = 'slate' }) {
+  if (!rows?.length) return null
+
+  const accentClasses =
+    accent === 'primary'
+      ? 'border-primary-200/70 bg-primary-50/70 dark:border-primary-500/30 dark:bg-primary-900/30'
+      : 'border-slate-200/70 bg-slate-50/70 dark:border-slate-700/40 dark:bg-slate-900/40'
+
+  return (
+    <div className={`rounded-2xl border px-4 py-4 ${accentClasses}`}>
+      <h5 className="text-xs uppercase tracking-[0.26em] text-slate-500 dark:text-slate-400">Daftar Rumus Excel</h5>
+      <ul className="mt-3 space-y-2 text-sm">
+        {rows.map(row => (
+          <li key={`formula-${row.key}`} className="flex flex-col gap-1 rounded-xl bg-white/60 px-3 py-2 shadow-sm dark:bg-slate-900/60">
+            <span className="font-mono text-xs text-primary-700 dark:text-primary-200">{row.formula}</span>
+            <span className="text-slate-600 dark:text-slate-300">{row.label}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
