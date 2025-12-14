@@ -26,9 +26,9 @@ function showAlert(icon, title, text) {
 export default function ChartEditor() {
   const { data, saveAkreditasi } = useApp()
   const [local, setLocal] = useState({ ...data.akreditasi })
-  const [month, setMonth] = useState('')
-  const [year, setYear] = useState('')
-  const [region, setRegion] = useState('')
+  const [month, setMonth] = useState(data.akreditasi?.month ? String(data.akreditasi.month) : '')
+  const [year, setYear] = useState(data.akreditasi?.year ? String(data.akreditasi.year) : '')
+  const [region, setRegion] = useState(data.akreditasi?.region || '')
   const [history, setHistory] = useState([])
   const [historyMonth, setHistoryMonth] = useState('')
   const [historyYear, setHistoryYear] = useState('')
@@ -45,35 +45,46 @@ export default function ChartEditor() {
     return history.filter(item => {
       if (historyYear && Number(historyYear) !== Number(item.year)) return false
       if (historyMonth && Number(historyMonth) !== Number(item.month)) return false
+      if (region && (item.region || '') !== region) return false
       return true
     })
-  }, [history, historyMonth, historyYear])
+  }, [history, historyMonth, historyYear, region])
 
   const reloadHistory = useCallback(async () => {
     try {
-      const rows = await API.getAkreditasiPeriods()
+      const params = region ? { region } : {}
+      const rows = await API.getAkreditasiHistory(params)
       if (Array.isArray(rows)) setHistory(rows)
     } catch (err) {
       console.warn('Failed to load akreditasi history', err)
     }
-  }, [])
+  }, [region])
 
   // when month/year selected, load akreditasi for that period from API (if available)
   useEffect(() => {
     let ignore = false
     async function loadForPeriod() {
-      if (!month || !year) {
+      const hasFilters = Boolean(month || year || region)
+      if (!hasFilters) {
         setLocal({ ...data.akreditasi })
         return
       }
+
+      const params = {}
+      if (year) params.year = year
+      if (month) params.month = month
+      if (region) params.region = region
+
       try {
-        const akr = await API.getAkreditasi({ year, month, region })
+        const akr = await API.getAkreditasi(params)
         if (!ignore && akr && typeof akr === 'object') {
           setLocal({
             paripurna: Number(akr.paripurna ?? 0),
             utama: Number(akr.utama ?? 0),
             madya: Number(akr.madya ?? 0),
           })
+        } else if (!ignore) {
+          setLocal({ ...data.akreditasi })
         }
       } catch (e) {
         console.warn('Failed to load akreditasi for period', e)
@@ -84,7 +95,7 @@ export default function ChartEditor() {
     return () => {
       ignore = true
     }
-  }, [month, year, data.akreditasi])
+  }, [month, year, region, data.akreditasi])
 
   useEffect(() => {
     reloadHistory()
@@ -97,12 +108,19 @@ export default function ChartEditor() {
 
   async function save() {
     try {
-      await saveAkreditasi({
+      const res = await saveAkreditasi({
         ...local,
         year: year ? Number(year) : undefined,
         month: month ? Number(month) : undefined,
         region: region || undefined,
       })
+      if (res && typeof res === 'object') {
+        setLocal({
+          paripurna: Number(res.paripurna ?? local.paripurna ?? 0),
+          utama: Number(res.utama ?? local.utama ?? 0),
+          madya: Number(res.madya ?? local.madya ?? 0),
+        })
+      }
       showAlert('success', 'Berhasil', 'Nilai akreditasi berhasil disimpan.')
       reloadHistory()
     } catch (err) {
