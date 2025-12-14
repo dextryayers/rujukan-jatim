@@ -61,8 +61,31 @@ export async function ping() {
   return request('/ping');
 }
 
-export async function getAkreditasi() {
-  return request('/akreditasi');
+export async function getAkreditasi(params = {}) {
+  const query = new URLSearchParams();
+  if (params.year) query.set('year', params.year);
+  if (params.month) query.set('month', params.month);
+  if (params.region) query.set('region', params.region);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return request(`/akreditasi${suffix}`);
+}
+
+export async function saveAkreditasi(payload) {
+  return request('/akreditasi', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getAkreditasiHistory(params = {}) {
+  const query = new URLSearchParams();
+  if (params.year) query.set('year', params.year);
+  if (params.month) query.set('month', params.month);
+  if (params.region) query.set('region', params.region);
+  if (params.limit) query.set('limit', params.limit);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return request(`/akreditasi/history${suffix}`);
 }
 
 export async function getIndikators() {
