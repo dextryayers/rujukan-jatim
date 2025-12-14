@@ -23,11 +23,19 @@ export function AppProvider({ children }) {
     return parsed
   })
 
+  const normalizeUser = useCallback((raw) => {
+    if (!raw || typeof raw !== 'object') return null
+    const photoUrl = raw.photoUrl || raw.photo_url || null
+    return { ...raw, photoUrl }
+  }, [])
+
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('mutu-user')
     if (!saved) return null
     try {
-      return JSON.parse(saved)
+      const parsed = JSON.parse(saved)
+      const photoUrl = parsed.photoUrl || parsed.photo_url || null
+      return { ...parsed, photoUrl }
     } catch {
       return null
     }
@@ -68,7 +76,90 @@ export function AppProvider({ children }) {
     if (!item) return false
     const category = (item.category || '').toLowerCase()
     const description = (item.description || '').toLowerCase()
-    return category === PROFILE_PHOTO_TAG || description.includes('foto profil admin')
+    if (category.includes('profile') || description.includes('profile')) return true
+    if (category.includes('avatar') || description.includes('avatar')) return true
+    return false
+  }
+
+  function normalizeDocumentShape(item = {}) {
+    if (!item) return null
+
+    const fileUrl = item.file_url || item.fileUrl || null
+    const downloadUrl = item.download_url || item.downloadUrl || fileUrl
+    const createdAt = item.created_at || item.createdAt || null
+    const updatedAt = item.updated_at || item.updatedAt || createdAt
+    const publishedAt = item.published_at || item.publishedAt || createdAt
+
+    return {
+      id: item.id ?? item.document_id ?? Date.now(),
+      title: item.title || 'Dokumen Tanpa Judul',
+      description: item.description || '',
+      category: item.category ?? null,
+      fileUrl,
+      downloadUrl,
+      fileName: item.file_name || item.fileName || null,
+      mimeType: item.mime_type || item.mimeType || null,
+      fileSize: item.file_size || item.fileSize || null,
+      offlineFallback: Boolean(item.offlineFallback),
+      syncError: item.syncError || null,
+      storage: item.storage || (isProfilePhotoDocument(item) ? 'legacy' : 'public'),
+      createdAt,
+      updatedAt,
+      publishedAt,
+    }
+  }
+
+  const [documents, setDocuments] = useState(() => {
+    const saved = localStorage.getItem('mutu-documents')
+    if (saved) return JSON.parse(saved)
+    return []
+  })
+
+  async function uploadDocument(file, username = '') {
+    if (!file) throw new Error('Tidak ada file')
+
+    function applyDocument(id, url, fallback = false, meta = {}) {
+      const updatedDocuments = [...documents, normalizeDocumentShape({ id, fileUrl: url, offlineFallback: fallback, ...meta })]
+      setDocuments(updatedDocuments)
+      try {
+        localStorage.setItem('mutu-documents', JSON.stringify(updatedDocuments))
+      } catch {}
+      return url
+    }
+
+    if (useApi && typeof API.uploadDocument === 'function') {
+      const formData = new FormData()
+      const title = `Dokumen ${username || 'Admin'}`.trim()
+      const description = `Dokumen admin ${username || ''}`.trim()
+      formData.append('title', title)
+      formData.append('description', description)
+      formData.append('file', file)
+      try {
+        const res = await API.uploadDocument(formData)
+        const url = res.file_url || res.fileUrl
+        if (url) {
+          applyDocument(res.id, url, false, {
+            fileName: res.file_name || res.fileName || file.name,
+            mimeType: res.mime_type || res.mimeType || file.type,
+            fileSize: res.file_size || res.fileSize || file.size,
+          })
+        }
+        return url
+      } catch (err) {
+        console.warn('Upload dokumen via API gagal, memakai fallback lokal.', err)
+      }
+    }
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onerror = e => reject(e || new Error('Pembacaan dokumen gagal'))
+      reader.onload = () => {
+        const base64 = reader.result
+        applyDocument(Date.now(), base64, true)
+        resolve(base64)
+      }
+      reader.readAsDataURL(file)
+    })
   }
 
   async function uploadProfilePhoto(file, username = '') {
@@ -248,6 +339,9 @@ export function AppProvider({ children }) {
                 utama: Number(akr.utama ?? prev.akreditasi?.utama ?? 0),
                 madya: Number(akr.madya ?? prev.akreditasi?.madya ?? 0),
                 recordedAt: akr.recorded_at ?? prev.akreditasi?.recordedAt ?? null,
+                year: akr.year ?? prev.akreditasi?.year ?? null,
+                month: akr.month ?? prev.akreditasi?.month ?? null,
+                region: akr.region ?? prev.akreditasi?.region ?? null,
               }
             : prev.akreditasi,
           indikators: Array.isArray(inds)
@@ -264,15 +358,7 @@ export function AppProvider({ children }) {
           documents: Array.isArray(docs)
             ? docs
                 .filter(item => !isProfilePhotoDocument(item))
-                .map(item => ({
-                id: item.id,
-                title: item.title,
-                description: item.description ?? '',
-                fileUrl: item.file_url || item.fileUrl,
-                fileName: item.file_name,
-                mimeType: item.mime_type,
-                fileSize: item.file_size,
-              }))
+                .map(item => normalizeDocumentShape(item))
             : prev.documents,
         }))
         await Promise.all([trackVisitor(true), refreshVisitorSummary()])
@@ -292,8 +378,11 @@ export function AppProvider({ children }) {
         if (token) {
           try {
             const me = await API.me()
-            // me already contains id, username, role, email, phone
-            setUser(me)
+            const normalized = normalizeUser(me)
+            setUser(normalized)
+            try {
+              localStorage.setItem('mutu-user', JSON.stringify(normalized))
+            } catch {}
           } catch {}
         }
         trackVisitor()
@@ -323,8 +412,11 @@ export function AppProvider({ children }) {
     if (!useApi || typeof API.login !== 'function') return false
     const res = await API.login(email, password, recaptchaToken)
     if (res && res.user) {
-      setUser(res.user)
-      localStorage.setItem('mutu-user', JSON.stringify(res.user))
+      const normalized = normalizeUser(res.user)
+      setUser(normalized)
+      try {
+        localStorage.setItem('mutu-user', JSON.stringify(normalized))
+      } catch {}
       return true
     }
     return false
@@ -350,16 +442,22 @@ export function AppProvider({ children }) {
 
     const res = await API.register(payload)
     if (res && res.user) {
-      setUser(res.user)
-      localStorage.setItem('mutu-user', JSON.stringify(res.user))
+      const normalized = normalizeUser(res.user)
+      setUser(normalized)
+      try {
+        localStorage.setItem('mutu-user', JSON.stringify(normalized))
+      } catch {}
       return true
     }
 
     if (loginRecaptchaToken && typeof API.login === 'function') {
       const loginRes = await API.login(email, password, loginRecaptchaToken)
       if (loginRes && loginRes.user) {
-        setUser(loginRes.user)
-        localStorage.setItem('mutu-user', JSON.stringify(loginRes.user))
+        const normalized = normalizeUser(loginRes.user)
+        setUser(normalized)
+        try {
+          localStorage.setItem('mutu-user', JSON.stringify(normalized))
+        } catch {}
         return true
       }
     }
@@ -386,20 +484,36 @@ export function AppProvider({ children }) {
 
   // API-aware helpers (fallback to local update if API unavailable)
   async function saveAkreditasi(next) {
-    if (useApi && typeof API.updateAkreditasi === 'function') {
-      const res = await API.updateAkreditasi(next)
+    if (useApi && typeof API.saveAkreditasi === 'function') {
+      const res = await API.saveAkreditasi(next)
       setData(prev => ({
         ...prev,
         akreditasi: {
-          paripurna: Number(res.paripurna ?? prev.akreditasi?.paripurna ?? 0),
-          utama: Number(res.utama ?? prev.akreditasi?.utama ?? 0),
-          madya: Number(res.madya ?? prev.akreditasi?.madya ?? 0),
+          paripurna: Number(res.paripurna ?? next.paripurna ?? prev.akreditasi?.paripurna ?? 0),
+          utama: Number(res.utama ?? next.utama ?? prev.akreditasi?.utama ?? 0),
+          madya: Number(res.madya ?? next.madya ?? prev.akreditasi?.madya ?? 0),
           recordedAt: res.recorded_at ?? prev.akreditasi?.recordedAt ?? null,
+          year: res.year ?? next.year ?? prev.akreditasi?.year ?? null,
+          month: res.month ?? next.month ?? prev.akreditasi?.month ?? null,
+          region: res.region ?? next.region ?? prev.akreditasi?.region ?? null,
         },
       }))
-    } else {
-      setData(prev => ({ ...prev, akreditasi: { ...next } }))
+      return res
     }
+
+    setData(prev => ({
+      ...prev,
+      akreditasi: {
+        paripurna: Number(next.paripurna ?? prev.akreditasi?.paripurna ?? 0),
+        utama: Number(next.utama ?? prev.akreditasi?.utama ?? 0),
+        madya: Number(next.madya ?? prev.akreditasi?.madya ?? 0),
+        recordedAt: next.recorded_at ?? prev.akreditasi?.recordedAt ?? null,
+        year: next.year ?? prev.akreditasi?.year ?? null,
+        month: next.month ?? prev.akreditasi?.month ?? null,
+        region: next.region ?? prev.akreditasi?.region ?? null,
+      },
+    }))
+    return next
   }
 
   async function createIndicator(name = 'New indikator', capaian = 0, target = 100, date = null, region = null) {
@@ -496,11 +610,13 @@ export function AppProvider({ children }) {
     const normalizedTitle = title || file?.name || 'Dokumen Tanpa Judul'
 
     function pushDocument(doc) {
+      const normalized = normalizeDocumentShape(doc)
+      if (!normalized) return doc
       setData(prev => ({
         ...prev,
-        documents: [doc, ...prev.documents],
+        documents: [normalized, ...prev.documents.filter(existing => existing.id !== normalized.id)],
       }))
-      return doc
+      return normalized
     }
 
     const createLocalDocument = (offline, error) => new Promise((resolve, reject) => {
@@ -537,19 +653,17 @@ export function AppProvider({ children }) {
       formData.append('file', file)
       try {
         const doc = await API.uploadDocument(formData)
-        const storedDoc = {
-          id: doc.id,
+        return pushDocument({
+          ...doc,
           title: doc.title ?? normalizedTitle,
           description: doc.description ?? description ?? '',
-          fileUrl: doc.file_url || doc.fileUrl,
-          fileName: doc.file_name || file?.name,
-          mimeType: doc.mime_type || file?.type,
-          fileSize: doc.file_size || file?.size,
+          file_name: doc.file_name || file?.name,
+          mime_type: doc.mime_type || file?.type,
+          file_size: doc.file_size || file?.size,
           offlineFallback: false,
           syncError: null,
-          syncedAt: new Date().toISOString(),
-        }
-        return pushDocument(storedDoc)
+          storage: doc.storage || 'public',
+        })
       } catch (err) {
         console.warn('Upload document via API gagal, menggunakan fallback lokal.', err)
         return createLocalDocument(true, err)
@@ -571,18 +685,17 @@ export function AppProvider({ children }) {
       setData(prev => ({
         ...prev,
         documents: prev.documents.map(d => (d.id === id
-          ? {
-              id: updated.id,
+          ? normalizeDocumentShape({
+              ...d,
+              ...updated,
               title: updated.title,
               description: updated.description ?? '',
-              fileUrl: updated.file_url || updated.fileUrl,
-              fileName: updated.file_name,
-              mimeType: updated.mime_type,
-              fileSize: updated.file_size,
-              offlineFallback: false,
-              syncError: null,
-              syncedAt: new Date().toISOString(),
-            }
+              file_url: updated.file_url || updated.fileUrl,
+              file_name: updated.file_name,
+              mime_type: updated.mime_type,
+              file_size: updated.file_size,
+              updated_at: updated.updated_at ?? new Date().toISOString(),
+            })
           : d)),
       }))
       return
@@ -746,8 +859,12 @@ export function AppProvider({ children }) {
   async function updateProfile(updates) {
     if (useApi && typeof API.updateProfile === 'function') {
       const me = await API.updateProfile(updates)
-      setUser(me)
-      return me
+      const normalized = normalizeUser(me)
+      setUser(normalized)
+      try {
+        localStorage.setItem('mutu-user', JSON.stringify(normalized))
+      } catch {}
+      return normalized
     }
     return null
   }
