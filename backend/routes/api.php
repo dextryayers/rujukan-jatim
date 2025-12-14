@@ -10,11 +10,16 @@ use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\VisitorAnalyticsController;
 use App\Http\Controllers\ActivityLogController;
 
+Route::options('/{any}', function () {
+    return response()->noContent();
+})->where('any', '.*');
+
 Route::get('/ping', function () {
     return response()->json(['message' => 'pong from Laravel']);
 });
 
 Route::get('/akreditasi', [AccreditationController::class, 'index']);
+Route::get('/akreditasi/history', [AccreditationController::class, 'history']);
 Route::get('/indikators', [IndicatorController::class, 'index']);
 Route::get('/documents', [DocumentController::class, 'index']);
 Route::get('/documents/{document}/download', [DocumentController::class, 'download'])->name('documents.download');
@@ -41,8 +46,8 @@ Route::middleware('auth.token:admin')->group(function () {
     Route::post('/indikators/replace', [IndicatorController::class, 'replace']);
 
     Route::post('/documents', [DocumentController::class, 'store']);
-    Route::post('/documents/{document}', [DocumentController::class, 'update']);
-    Route::delete('/documents/{document}', [DocumentController::class, 'destroy']);
+    Route::post('/documents/{documentId}', [DocumentController::class, 'update']);
+    Route::delete('/documents/{documentId}', [DocumentController::class, 'destroy']);
 
     Route::get('/admin/users', [AdminUserController::class, 'index']);
     Route::post('/admin/users', [AdminUserController::class, 'store']);
