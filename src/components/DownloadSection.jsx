@@ -2,12 +2,25 @@ import React from 'react'
 import { useApp } from '../context/AppContext'
 
 function DocCard({ doc }) {
+  const previewUrl = doc.fileUrl || doc.downloadUrl
+  const canPreview = Boolean(previewUrl) && /^(application\/(pdf|msword|vnd\.[^;]+)|image\/[^;]+|text\/[^;]+)$/i.test(doc.mimeType || '')
+
   return (
     <div className="bg-white/90 dark:bg-slate-800/90 rounded-xl shadow-sm hover:shadow-lg border border-slate-100 dark:border-slate-700 p-4 flex flex-col items-start transition hover:-translate-y-1">
       <div className="text-3xl font-bold text-primary-700 dark:text-primary-300">{doc.icon || '📄'}</div>
       <h4 className="font-semibold mt-2 text-slate-900 dark:text-slate-100">{doc.title}</h4>
       <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 whitespace-pre-line">{doc.description || 'Dokumen resmi untuk referensi dan pembinaan mutu.'}</p>
-      <div className="mt-4 w-full flex justify-end">
+      <div className="mt-4 w-full flex items-center justify-end gap-2">
+        {canPreview && (
+          <a
+            href={previewUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 border border-primary-200/70 text-primary-600 hover:text-primary-700 hover:border-primary-300 rounded-full text-sm font-semibold shadow-sm hover:shadow-md transition-transform duration-150 hover:-translate-y-0.5 bg-white/80 dark:bg-transparent dark:border-primary-500/50 dark:text-primary-200"
+          >
+            👁️ Lihat
+          </a>
+        )}
         <a
           href={doc.fileUrl}
           download
