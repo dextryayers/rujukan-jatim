@@ -35,18 +35,27 @@ export default function AkreditasiSection() {
   useEffect(() => {
     let ignore = false
     async function loadForPeriod() {
-      if (!month || !year) {
+      const hasFilters = Boolean(month || year || region)
+      if (!hasFilters) {
         setLocal({ ...data.akreditasi })
         return
       }
+
+      const params = {}
+      if (year) params.year = year
+      if (month) params.month = month
+      if (region) params.region = region
+
       try {
-        const akr = await API.getAkreditasi({ year, month, region })
+        const akr = await API.getAkreditasi(params)
         if (!ignore && akr && typeof akr === 'object') {
           setLocal({
             paripurna: Number(akr.paripurna ?? 0),
             utama: Number(akr.utama ?? 0),
             madya: Number(akr.madya ?? 0),
           })
+        } else if (!ignore) {
+          setLocal({ ...data.akreditasi })
         }
       } catch (e) {
         console.warn('Failed to load akreditasi for period in public chart', e)
@@ -57,7 +66,7 @@ export default function AkreditasiSection() {
     return () => {
       ignore = true
     }
-  }, [month, year, data.akreditasi])
+  }, [month, year, region, data.akreditasi])
 
   const pieData = {
     labels: ['Paripurna', 'Utama', 'Madya'],
