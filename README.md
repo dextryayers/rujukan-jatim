@@ -327,12 +327,6 @@ Pastikan `VITE_API_URL` mengarah ke domain API yang telah mengizinkan CORS.
 
 ## 📄 Lisensi & Kontak
 
-Proyek adalah aset internal Dinas Kesehatan Jawa Timur. Penggunaan eksternal memerlukan persetujuan resmi.
+Copyright © Hanif Abdurrohim
 
-- **Kontak teknis**: bidang IT Dinkes Jatim — it-support@dinkesjatim.go.id
-- **Kontak administrasi**: Sekretariat Dinkes Jatim — admin@dinkesjatim.go.id
-
----
-
-> Dokumentasi diperbarui terakhir pada **Desember 2025**. Mohon perbarui README setiap kali ada perubahan signifikan pada infrastruktur, dependensi, atau alur kerja.
 
