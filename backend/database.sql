@@ -29,8 +29,8 @@ CREATE TABLE IF NOT EXISTS `accreditation_stats` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-INSERT INTO `accreditation_stats` (`paripurna`, `utama`, `madya`, `recorded_at`)
-VALUES (45, 35, 20, NOW());
+-- INSERT INTO `accreditation_stats` (`paripurna`, `utama`, `madya`, `recorded_at`)
+-- VALUES (45, 35, 20, NOW());
 
 CREATE TABLE IF NOT EXISTS `indicators` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -45,11 +45,11 @@ CREATE TABLE IF NOT EXISTS `indicators` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-INSERT INTO `indicators` (`name`, `capaian`, `target`, `status`) VALUES
-  ('Kepatuhan kebersihan tangan', 90.00, 95.00, 'Mencapai Target'),
-  ('Kepatuhan penggunaan APD', 96.00, 98.00, 'Tidak Mencapai Target'),
-  ('Kepatuhan identifikasi pasien', 99.00, 100.00, 'Tidak Mencapai Target'),
-  ('Waktu tanggap operasi SC emergensi', 89.00, 90.00, 'Mencapai Target');
+-- INSERT INTO `indicators` (`name`, `capaian`, `target`, `status`) VALUES
+--   ('Kepatuhan kebersihan tangan', 90.00, 95.00, 'Mencapai Target'),
+--   ('Kepatuhan penggunaan APD', 96.00, 98.00, 'Tidak Mencapai Target'),
+--   ('Kepatuhan identifikasi pasien', 99.00, 100.00, 'Tidak Mencapai Target'),
+--   ('Waktu tanggap operasi SC emergensi', 89.00, 90.00, 'Mencapai Target');
 
 CREATE TABLE IF NOT EXISTS `documents` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -63,6 +63,42 @@ CREATE TABLE IF NOT EXISTS `documents` (
   `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE `documents`
+  ADD COLUMN `category` VARCHAR(100) NULL AFTER `description`,
+  ADD COLUMN `file_url` VARCHAR(2048) NULL AFTER `file_path`;
+
+
+CREATE TABLE `public_documents` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `category` varchar(255) DEFAULT NULL,
+  `file_path` varchar(255) DEFAULT NULL,
+  `file_url` varchar(255) DEFAULT NULL,
+  `file_name` varchar(255) DEFAULT NULL,
+  `mime_type` varchar(255) DEFAULT NULL,
+  `file_size` bigint unsigned DEFAULT NULL,
+  `published_at` timestamp NULL DEFAULT NULL,
+  `created_by` bigint unsigned DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `public_documents_published_at_index` (`published_at`),
+  KEY `public_documents_category_index` (`category`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Jika belum migrate  
+
+INSERT INTO public_documents
+  (title, description, category, file_path, file_url, file_name, mime_type, file_size, published_at, created_at, updated_at)
+SELECT
+  title, description, category, file_path,
+  file_url, file_name, mime_type, file_size,
+  created_at, created_at, updated_at
+FROM documents
+WHERE category IS NULL OR category != 'profile-photo';
+
 
 CREATE TABLE IF NOT EXISTS `auth_tokens` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
