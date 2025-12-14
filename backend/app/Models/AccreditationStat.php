@@ -11,5 +11,17 @@ class AccreditationStat extends Model
         'utama',
         'madya',
         'recorded_at',
+        'year',
+        'month',
+        'region',
+    ];
+
+    protected $casts = [
+        'paripurna' => 'integer',
+        'utama' => 'integer',
+        'madya' => 'integer',
+        'year' => 'integer',
+        'month' => 'integer',
+        'recorded_at' => 'datetime',
     ];
 }
